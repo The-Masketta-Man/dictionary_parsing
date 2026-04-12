@@ -1,0 +1,68 @@
+import re
+from docx import Document
+
+LABELS = [
+    # стилистические
+    "прост.", "разг.", "книжн.", "книжн.-слав.", "устар.",
+    "высок.", "ирон.", "шутл.", "пренебр.", "диал.",
+    "церк.", "поэт.", "офиц.",
+
+    # грамматические
+    "союз", "частица", "межд.", "нареч.",
+
+    # прочие встречающиеся
+    "вопр.", "ср."
+]
+
+LABEL_PATTERN = r"\b(" + "|".join([re.escape(l) for l in LABELS]) + r")\b"
+
+
+def extract_labels(text):
+    
+    labels = re.findall(LABEL_PATTERN, text)
+
+    return list(set(labels))  
+
+
+def extract_labels_with_context(text, window=40):
+   
+    results = []
+
+    for match in re.finditer(LABEL_PATTERN, text):
+        label = match.group(1)
+        start, end = match.span()
+
+        context_start = max(0, start - window)
+        context_end = min(len(text), end + window)
+
+        context = text[context_start:context_end]
+
+        results.append({
+            "label": label,
+            "context": context.strip()
+        })
+
+    return results
+
+
+def process_docx(file_path):
+    doc = Document(file_path)
+
+    full_text = "\n".join(p.text for p in doc.paragraphs)
+
+    return extract_labels_with_context(full_text)
+
+
+def main():
+    file_path = "/vsc/data/cd33d8ed-e2c9-4481-92c0-fc0a17b9836d.docx"
+
+    results = process_docx(file_path)
+
+    for r in results[:30]:
+        print("Помета:", r["label"])
+        print("Контекст:", r["context"])
+        print("-" * 50)
+
+
+if __name__ == "__main__":
+    main()
